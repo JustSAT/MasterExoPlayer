@@ -56,7 +56,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
             builder.setAllocator(DefaultAllocator(true, 2 * 1024 * 1024))
             builder.setBufferDurationsMs(5000, 5000, 5000, 5000)
             builder.setPrioritizeTimeOverSizeThresholds(true)
-            mLoadControl = builder.createDefaultLoadControl()
+            mLoadControl = builder.build()
 
             if (enableCache) {
                 val evictor = LeastRecentlyUsedCacheEvictor(cacheSizeInMb * 1024 * 1024)
@@ -67,6 +67,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
 
                 val dataSink = CacheDataSink.Factory()
                     .setCache(simpleCache!!)
+                    .setFragmentSize(CacheDataSink.DEFAULT_FRAGMENT_SIZE)
                     .setFragmentSize((2 * 1024 * 1024).toLong())
 
                 mDataSourceFactory = CacheDataSource.Factory()
@@ -74,7 +75,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
                     .setUpstreamDataSourceFactory(mDataSourceFactory)
                     .setCacheReadDataSourceFactory(FileDataSource.Factory())
                     .setCacheWriteDataSinkFactory(dataSink)
-                    .setFlags(CacheDataSource.FLAG_BLOCK_ON_CACHE or CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
             }
         }
         mCacheEnabled = enableCache
