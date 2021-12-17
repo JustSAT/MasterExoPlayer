@@ -60,7 +60,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
 
             if (enableCache) {
                 val evictor = LeastRecentlyUsedCacheEvictor(cacheSizeInMb * 1024 * 1024)
-                val file = File(mContext.getCacheDir(), "media")
+                val file = File(mContext.cacheDir, "media")
 
                 if (simpleCache == null)
                     simpleCache = SimpleCache(file, evictor)

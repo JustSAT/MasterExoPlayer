@@ -35,7 +35,8 @@ class MasterExoPlayerHelper(
     val defaultMute: Boolean = false,
     val useController: Boolean = false,
     val thumbHideDelay: Long = 0,
-    private val loop: Int = Int.MAX_VALUE
+    private val loop: Int = Int.MAX_VALUE,
+    val cacheEnabled: Boolean = true
 ) {
     private val playerView: PlayerView
     val exoPlayerHelper: ExoPlayerHelper
@@ -49,7 +50,7 @@ class MasterExoPlayerHelper(
         exoPlayerHelper = ExoPlayerHelper(
             mContext = mContext,
             playerView = playerView,
-            enableCache = false,
+            enableCache = cacheEnabled,
             loopVideo = loop > 0,
             loopCount = loop
         )
