@@ -6,7 +6,8 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
-import coil.api.load
+import com.bumptech.glide.Glide
+//import coil.api.load
 import com.example.masterexoplayer.Model
 import com.example.masterexoplayer.R
 import com.example.masterexoplayer.databinding.ItemBinding
@@ -67,7 +68,9 @@ class PostAdapter(val list: ArrayList<Model>, val masterExoPlayerHelper: MasterE
             binding.text.text = model.title
             binding.frame.url = model.sources
             binding.frame.imageView = binding.image
-            binding.image.load(model.thumb)
+            Glide.with(binding.image)
+                .load(model.thumb)
+                .into(binding.image)
 
         }
     }
@@ -76,7 +79,9 @@ class PostAdapter(val list: ArrayList<Model>, val masterExoPlayerHelper: MasterE
         override fun onBind(model: Model) {
 
             binding.text.text = model.title
-            binding.image.load(model.thumb)
+            Glide.with(binding.image)
+                .load(model.thumb)
+                .into(binding.image)
 
         }
     }
@@ -87,7 +92,9 @@ class PostAdapter(val list: ArrayList<Model>, val masterExoPlayerHelper: MasterE
             adapter = SimpleAdapter.with<Model, NestedItemPlayerBinding>(R.layout.nested_item_player) { adapterPosition, model, binding ->
                 binding.frame.url = model.sources
                 binding.frame.imageView = binding.image
-                binding.image.load(model.thumb)
+                Glide.with(binding.image)
+                    .load(model.thumb)
+                    .into(binding.image)
                 binding.ivVolume.setOnClickListener {
                     binding.frame.isMute = !binding.frame.isMute
                 }

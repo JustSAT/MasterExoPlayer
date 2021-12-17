@@ -6,7 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
-import coil.api.load
+//import coil.api.load
 import com.example.masterexoplayer.databinding.ItemBinding
 import com.master.exoplayer.MasterExoPlayerHelper
 import com.simpleadapter.SimpleAdapter

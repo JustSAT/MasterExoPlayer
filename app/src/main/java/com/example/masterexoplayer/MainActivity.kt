@@ -6,7 +6,7 @@ import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import coil.api.load
+import com.bumptech.glide.Glide
 import com.example.masterexoplayer.databinding.ItemBinding
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.master.exoplayer.ExoPlayerHelper
@@ -36,7 +36,9 @@ class MainActivity : AppCompatActivity() {
                 binding.text.text = model.title
                 binding.frame.url = model.sources
                 binding.frame.imageView = binding.image
-                binding.image.load(model.thumb)
+                Glide.with(binding.image)
+                    .load(model.thumb)
+                    .into(binding.image)
 
                 binding.ivVolume.setOnClickListener {
                     binding.frame.isMute = !binding.frame.isMute

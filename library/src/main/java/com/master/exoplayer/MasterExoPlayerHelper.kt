@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
 import com.google.android.exoplayer2.ui.PlayerView
 import com.master.exoplayer.ExoPlayerHelper.Listener
@@ -66,7 +67,7 @@ class MasterExoPlayerHelper(
                 playerView.getPlayerParent()?.listener?.onBuffering(isBuffering)
             }
 
-            override fun onError(error: ExoPlaybackException?) {
+            override fun onError(error: PlaybackException?) {
                 super.onError(error)
                 playerView.getPlayerParent()?.listener?.onError(error)
             }

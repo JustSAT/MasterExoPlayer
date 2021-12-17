@@ -7,7 +7,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
-import coil.api.load
+import com.bumptech.glide.Glide
+//import coil.api.load
 import com.example.masterexoplayer.databinding.ItemBinding
 import com.master.exoplayer.ExoPlayerHelper
 import com.master.exoplayer.MasterExoPlayerHelper
@@ -66,7 +67,10 @@ class VidePlayFragment : Fragment() {
                 binding.text.text = model.title
                 binding.frame.url = model.sources
                 binding.frame.imageView = binding.image
-                binding.image.load(model.thumb)
+
+                Glide.with(binding.image)
+                    .load(model.thumb)
+                    .into(binding.image)
 
                 binding.ivVolume.setOnClickListener {
                     binding.frame.isMute = !binding.frame.isMute

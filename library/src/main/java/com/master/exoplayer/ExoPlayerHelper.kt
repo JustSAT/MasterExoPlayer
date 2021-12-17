@@ -11,10 +11,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.source.ClippingMediaSource
-import com.google.android.exoplayer2.source.ExtractorMediaSource
-import com.google.android.exoplayer2.source.LoopingMediaSource
-import com.google.android.exoplayer2.source.MediaSource
+import com.google.android.exoplayer2.analytics.AnalyticsCollector
+import com.google.android.exoplayer2.database.StandaloneDatabaseProvider
+import com.google.android.exoplayer2.source.*
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.source.smoothstreaming.SsMediaSource
@@ -22,14 +21,14 @@ import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.*
 import com.google.android.exoplayer2.upstream.cache.*
-import com.google.android.exoplayer2.util.Log
+import com.google.android.exoplayer2.util.Clock
 import com.google.android.exoplayer2.util.Util
 import java.io.File
 
 class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView, enableCache: Boolean = true, private val loopVideo: Boolean = false, val loopCount: Int = Integer.MAX_VALUE) :
     LifecycleObserver {
 
-    private var mPlayer: SimpleExoPlayer
+    private var mPlayer: ExoPlayer
     var cacheSizeInMb: Long = 500
 
     var progressRequired: Boolean = false
@@ -42,13 +41,14 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
     }
 
     init {
+        val bandwidthMeter = DefaultBandwidthMeter.Builder(mContext).build()
         if (mCacheEnabled != enableCache || mDataSourceFactory == null) {
 
 
             mDataSourceFactory = null
 
-            val bandwidthMeter = DefaultBandwidthMeter()
-            mDataSourceFactory = DefaultDataSourceFactory(mContext, Util.getUserAgent(mContext, mContext.getString(R.string.app_name)), bandwidthMeter)
+            mDataSourceFactory = DefaultDataSource.Factory(mContext)
+                .setTransferListener(bandwidthMeter)
 
             // LoadControl that controls when the MediaSource buffers more media, and how much media is buffered.
             // LoadControl is injected when the player is created.
@@ -63,33 +63,33 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
                 val file = File(mContext.cacheDir, "media")
 
                 if (simpleCache == null)
-                    simpleCache = SimpleCache(file, evictor)
+                    simpleCache = SimpleCache(file, evictor, StandaloneDatabaseProvider(mContext))
 
-                mDataSourceFactory = CacheDataSourceFactory(
-                    simpleCache,
-                    mDataSourceFactory,
-                    FileDataSourceFactory(),
-                    CacheDataSinkFactory(simpleCache, (2 * 1024 * 1024).toLong()),
-                    CacheDataSource.FLAG_BLOCK_ON_CACHE or CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR,
-                    object : CacheDataSource.EventListener {
-                        override fun onCacheIgnored(reason: Int) {
-                            //Log.d("Exo", "onCacheIgnored")
-                        }
+                val dataSink = CacheDataSink.Factory()
+                    .setCache(simpleCache!!)
+                    .setFragmentSize((2 * 1024 * 1024).toLong())
 
-                        override fun onCachedBytesRead(cacheSizeBytes: Long, cachedBytesRead: Long) {
-                            //Log.d("Exo", "onCachedBytesRead , cacheSizeBytes: $cacheSizeBytes   cachedBytesRead: $cachedBytesRead")
-                        }
-                    })
+                mDataSourceFactory = CacheDataSource.Factory()
+                    .setCache(simpleCache!!)
+                    .setUpstreamDataSourceFactory(mDataSourceFactory)
+                    .setCacheReadDataSourceFactory(FileDataSource.Factory())
+                    .setCacheWriteDataSinkFactory(dataSink)
+                    .setFlags(CacheDataSource.FLAG_BLOCK_ON_CACHE or CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
             }
         }
         mCacheEnabled = enableCache
 
-        mPlayer = ExoPlayerFactory.newSimpleInstance(
+        mPlayer = ExoPlayer.Builder(
             mContext,
             DefaultRenderersFactory(mContext),
-            DefaultTrackSelector(),
-            mLoadControl
-        )
+            DefaultMediaSourceFactory(mContext),
+            DefaultTrackSelector(mContext),
+            mLoadControl!!,
+            bandwidthMeter,
+            AnalyticsCollector(Clock.DEFAULT)
+        ).build()
+
+
         playerView.setShutterBackgroundColor(Color.TRANSPARENT)
         playerView.player = mPlayer
 
@@ -113,7 +113,8 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
             loopIfNecessary()
             mPlayer.playWhenReady = autoPlay
             isPreparing = true
-            mPlayer.prepare(mediaSource)
+            mPlayer.setMediaSource(mediaSource!!)
+            mPlayer.prepare()
         }
     }
 
@@ -138,19 +139,21 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
      */
     fun clip(start: Long, end: Long) {
         if (mediaSource != null) {
-            mediaSource = ClippingMediaSource(mediaSource, start * 1000, end * 1000)
+            mediaSource = ClippingMediaSource(mediaSource!!, start * 1000, end * 1000)
             loopIfNecessary()
         }
-        mPlayer.prepare(mediaSource)
+        mPlayer.setMediaSource(mediaSource!!)
+        mPlayer.prepare()
     }
 
     private fun buildMediaSource(uri: Uri): MediaSource {
+        val mediaItem = MediaItem.fromUri(uri)
         val type = Util.inferContentType(uri)
         when (type) {
-            C.TYPE_SS -> return SsMediaSource.Factory(mDataSourceFactory).createMediaSource(uri)
-            C.TYPE_DASH -> return DashMediaSource.Factory(mDataSourceFactory).createMediaSource(uri)
-            C.TYPE_HLS -> return HlsMediaSource.Factory(mDataSourceFactory).createMediaSource(uri)
-            C.TYPE_OTHER -> return ExtractorMediaSource.Factory(mDataSourceFactory).createMediaSource(uri)
+            C.TYPE_SS -> return SsMediaSource.Factory(mDataSourceFactory!!).createMediaSource(mediaItem)
+            C.TYPE_DASH -> return DashMediaSource.Factory(mDataSourceFactory!!).createMediaSource(mediaItem)
+            C.TYPE_HLS -> return HlsMediaSource.Factory(mDataSourceFactory!!).createMediaSource(mediaItem)
+            C.TYPE_OTHER -> return ProgressiveMediaSource.Factory(mDataSourceFactory!!).createMediaSource(mediaItem)
             else -> {
                 throw IllegalStateException("Unsupported type: $type") as Throwable
             }
@@ -162,7 +165,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
      */
     private fun loopIfNecessary() {
         if (loopVideo) {
-            mediaSource = LoopingMediaSource(mediaSource, loopCount)
+            mPlayer.repeatMode = Player.REPEAT_MODE_ALL
         }
     }
 
@@ -206,21 +209,21 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
     private fun startTimer() {
         if (progressRequired) {
             if (durationRunnable != null)
-                durationHandler.postDelayed(durationRunnable, 17)
+                durationHandler.postDelayed(durationRunnable!!, 17)
         }
     }
 
     private fun stopTimer() {
         if (progressRequired) {
             if (durationRunnable != null)
-                durationHandler.removeCallbacks(durationRunnable)
+                durationHandler.removeCallbacks(durationRunnable!!)
         }
     }
 
     /**
      * Returns SimpleExoPlayer instance you can use it for your own implementation
      */
-    fun getPlayer(): SimpleExoPlayer {
+    fun getPlayer(): ExoPlayer {
         return mPlayer
     }
 
@@ -231,7 +234,8 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
         val currentPosition = mPlayer.currentPosition
         mediaSource = buildMediaSource(Uri.parse(qualityUrl))
         loopIfNecessary()
-        mPlayer.prepare(mediaSource)
+        mPlayer.setMediaSource(mediaSource!!)
+        mPlayer.prepare()
         mPlayer.seekTo(currentPosition)
     }
 
@@ -240,7 +244,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
      */
     fun setSpeed(speed: Float) {
         val param = PlaybackParameters(speed)
-        mPlayer.setPlaybackParameters(param)
+        mPlayer.playbackParameters = param
     }
 
     /**
@@ -297,9 +301,9 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
      */
     fun setListener(progressRequired: Boolean = false, listener: Listener) {
         this.progressRequired = progressRequired
-        mPlayer.addListener(object : Player.EventListener {
+        mPlayer.addListener(object : Player.Listener {
 
-            override fun onPlayerError(error: ExoPlaybackException?) {
+            override fun onPlayerError(error: PlaybackException) {
                 listener.onError(error)
             }
 
@@ -346,7 +350,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
             durationRunnable = Runnable {
                 listener.onProgress(mPlayer.currentPosition)
                 if (mPlayer.playWhenReady) {
-                    durationHandler.postDelayed(durationRunnable, 500)
+                    durationHandler.postDelayed(durationRunnable!!, 500)
                 }
             }
         }
@@ -357,7 +361,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
         fun onStart() {}
         fun onStop() {}
         fun onProgress(positionMs: Long) {}
-        fun onError(error: ExoPlaybackException?) {}
+        fun onError(error: PlaybackException?) {}
         fun onBuffering(isBuffering: Boolean) {}
         fun onToggleControllerVisible(isVisible: Boolean) {}
 
