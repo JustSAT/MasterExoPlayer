@@ -59,6 +59,20 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
                     1024
                 ).build()
 
+//            if (enableCache) {
+//                if (simpleCache == null) {
+//                    val file = File(mContext.cacheDir, "media")
+//                    val leastRecentlyUsedCacheEvictor =
+//                        LeastRecentlyUsedCacheEvictor(524288000L) // 500 * 1024 * 1024
+//                    simpleCache = SimpleCache(file, leastRecentlyUsedCacheEvictor, StandaloneDatabaseProvider(mContext))
+//                }
+//
+//                mDataSourceFactory = CacheDataSource.Factory()
+//                    .setCache(simpleCache!!)
+//                    .setUpstreamDataSourceFactory(mDataSourceFactory)
+//                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+//            }
+            
             if (enableCache) {
                 if (simpleCache == null) {
                     val file = File(mContext.cacheDir, "media")
