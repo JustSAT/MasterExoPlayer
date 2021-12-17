@@ -53,7 +53,7 @@ class MasterExoPlayerHelper(
             playerView = playerView,
             enableCache = cacheEnabled,
             loopVideo = loop > 0,
-            loopCount = loop
+            loopCount = loop,
         )
         exoPlayerHelper.setListener(false, object : Listener {
             override fun onStart() {

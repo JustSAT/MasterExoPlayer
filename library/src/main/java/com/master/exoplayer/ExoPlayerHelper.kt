@@ -12,6 +12,7 @@ import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.analytics.AnalyticsCollector
+import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.database.StandaloneDatabaseProvider
 import com.google.android.exoplayer2.source.*
 import com.google.android.exoplayer2.source.dash.DashMediaSource
@@ -47,17 +48,31 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
 
             mDataSourceFactory = null
 
-            mDataSourceFactory = DefaultDataSource.Factory(mContext)
-                .setTransferListener(bandwidthMeter)
+            val httpDataSourceFactory = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+            mDataSourceFactory = DefaultDataSource.Factory(mContext, httpDataSourceFactory)
 
-            // LoadControl that controls when the MediaSource buffers more media, and how much media is buffered.
-            // LoadControl is injected when the player is created.
-            val builder = DefaultLoadControl.Builder()
-            builder.setAllocator(DefaultAllocator(true, 2 * 1024 * 1024))
-            builder.setBufferDurationsMs(5000, 5000, 5000, 5000)
-            builder.setPrioritizeTimeOverSizeThresholds(true)
-            mLoadControl = builder.build()
+            mLoadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                    32 * 1024,
+                    64 * 1024,
+                    1024,
+                    1024
+                ).build()
 
+//            if (enableCache) {
+//                if (simpleCache == null) {
+//                    val file = File(mContext.cacheDir, "media")
+//                    val leastRecentlyUsedCacheEvictor =
+//                        LeastRecentlyUsedCacheEvictor(524288000L) // 500 * 1024 * 1024
+//                    simpleCache = SimpleCache(file, leastRecentlyUsedCacheEvictor, StandaloneDatabaseProvider(mContext))
+//                }
+//
+//                mDataSourceFactory = CacheDataSource.Factory()
+//                    .setCache(simpleCache!!)
+//                    .setUpstreamDataSourceFactory(mDataSourceFactory)
+//                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+//            }
+            
             if (enableCache) {
                 val evictor = LeastRecentlyUsedCacheEvictor(cacheSizeInMb * 1024 * 1024)
                 val file = File(mContext.cacheDir, "media")
