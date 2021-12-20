@@ -25,6 +25,7 @@ import com.master.exoplayer.ExoPlayerHelper.Listener
  * @param muteStrategy Used to decide whether mute one player affects other player also or not, values may be MuteStrategy.ALL, MuteStrategy.INDIVIDUAL, if individual user need to manage isMute flag with there own
  * @param defaultMute Used to decide whether player is mute by default or not, Default Value is false
  * @param loop Used whether need to play video in looping or not, if 0 then no looping will be there, Default is Int.MAX_VALUE
+ * @param cacheEnabled Used to decide we need to cache video or not. Default is true
  */
 class MasterExoPlayerHelper(
     mContext: Context,
@@ -37,7 +38,7 @@ class MasterExoPlayerHelper(
     val useController: Boolean = false,
     val thumbHideDelay: Long = 0,
     private val loop: Int = Int.MAX_VALUE,
-    val cacheEnabled: Boolean = true
+    cacheEnabled: Boolean = true
 ) {
     private val playerView: PlayerView
     val exoPlayerHelper: ExoPlayerHelper
