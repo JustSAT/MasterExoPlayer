@@ -70,6 +70,12 @@ class MainActivity : AppCompatActivity() {
                         super.onStop()
                         binding.ivVolume.visibility = View.GONE
                     }
+
+                    override fun onVideoStopped(time: Long, index: Int) {
+                        super.onVideoStopped(time, index)
+                        Log.d("Master", "Video at index: $index. Stopped at time: $time ")
+                    }
+
                 }
             }
         recyclerView.layoutManager = LinearLayoutManager(this)

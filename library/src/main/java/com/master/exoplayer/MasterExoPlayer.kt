@@ -26,6 +26,10 @@ class MasterExoPlayer : FrameLayout {
 //        const val ID = 0x11203
     }
 
+    private var _viewHolderPosition: Int = 0
+    val viewHolderPosition: Int
+        get() = _viewHolderPosition
+
     var url: String? = ""
     var imageView: ImageView? = null
     var isMute: Boolean = true
@@ -43,7 +47,7 @@ class MasterExoPlayer : FrameLayout {
 
     var playerView: PlayerView? = null
 
-    fun addPlayer(playerView: PlayerView, autoPlay: Boolean) {
+    fun addPlayer(playerView: PlayerView, autoPlay: Boolean, position: Int) {
         if (this.playerView == null) {
             this.playerView = playerView
             addView(playerView)
@@ -51,16 +55,21 @@ class MasterExoPlayer : FrameLayout {
             if (autoPlay) {
 //                imageView?.animate()?.setDuration(0)?.alpha(0f)
             }
+            _viewHolderPosition = position
         }
     }
 
     fun removePlayer() {
         if (playerView != null) {
+            val position = playerView?.player?.currentPosition
             removeView(playerView)
             playerView = null
             imageView?.visibility = View.VISIBLE
             imageView?.animate()?.setDuration(0)?.alpha(1f)
             listener?.onStop()
+            if (position != null) {
+                listener?.onVideoStopped(position, viewHolderPosition)
+            }
         }
     }
 

@@ -102,6 +102,7 @@ class VidePlayFragment : Fragment() {
                         super.onStop()
                         binding.ivVolume.visibility = View.GONE
                     }
+
                 }
             }
         recyclerView.layoutManager = LinearLayoutManager(activity!!)

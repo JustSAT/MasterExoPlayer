@@ -7,9 +7,7 @@ import android.os.Handler
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.*
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.analytics.AnalyticsCollector
 import com.google.android.exoplayer2.database.StandaloneDatabaseProvider
@@ -26,8 +24,9 @@ import com.google.android.exoplayer2.util.Util
 import java.io.File
 
 class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView, enableCache: Boolean = true, private val loopVideo: Boolean = false, val loopCount: Int = Integer.MAX_VALUE) :
-    LifecycleObserver {
+    DefaultLifecycleObserver {
 
+    private var stoppedTime: Long = 0L
     private var mPlayer: ExoPlayer
     var cacheSizeInMb: Long = 500
 
@@ -108,6 +107,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
 
     fun setUrl(url: String, autoPlay: Boolean = false) {
         if (lifecycle?.currentState == Lifecycle.State.RESUMED) {
+            val resume = this.url == url
             this.url = url
             mediaSource = buildMediaSource(Uri.parse(url))
             loopIfNecessary()
@@ -115,6 +115,9 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
             isPreparing = true
             mPlayer.setMediaSource(mediaSource!!)
             mPlayer.prepare()
+            if (resume) {
+                seekTo(stoppedTime)
+            }
         }
     }
 
@@ -276,20 +279,20 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
     }
 
 
-    //Life Cycle
-    @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-    protected fun onPause() {
+    override fun onPause(owner: LifecycleOwner) {
         mPlayer.playWhenReady = false
+        stoppedTime = mPlayer.currentPosition
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-    protected fun onDestroy() {
+    override fun onDestroy(owner: LifecycleOwner) {
         mPlayer.playWhenReady = false
+        stoppedTime = mPlayer.currentPosition
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
-    protected fun onResume(){
+    override fun onResume(owner: LifecycleOwner) {
         mPlayer.playWhenReady = true
+        mPlayer.seekTo(stoppedTime)
+        stoppedTime = 0L
     }
 
     //LISTENERS
@@ -338,6 +341,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
                     }
                 }
             }
+
         })
 
         playerView.setControllerVisibilityListener { visibility ->
@@ -358,6 +362,7 @@ class ExoPlayerHelper(val mContext: Context, private val playerView: PlayerView,
         fun onPlayerReady() {}
         fun onStart() {}
         fun onStop() {}
+        fun onVideoStopped(time: Long, index: Int) {}
         fun onProgress(positionMs: Long) {}
         fun onError(error: PlaybackException?) {}
         fun onBuffering(isBuffering: Boolean) {}

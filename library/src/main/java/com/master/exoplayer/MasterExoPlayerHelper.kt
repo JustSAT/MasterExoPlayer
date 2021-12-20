@@ -3,6 +3,7 @@ package com.master.exoplayer
 import android.content.Context
 import android.graphics.Point
 import android.graphics.Rect
+import android.util.Log
 import android.view.View
 import androidx.annotation.FloatRange
 import androidx.appcompat.app.AppCompatActivity
@@ -40,6 +41,7 @@ class MasterExoPlayerHelper(
     private val loop: Int = Int.MAX_VALUE,
     cacheEnabled: Boolean = true
 ) {
+
     private val playerView: PlayerView
     val exoPlayerHelper: ExoPlayerHelper
 
@@ -86,6 +88,11 @@ class MasterExoPlayerHelper(
             override fun onStop() {
                 super.onStop()
                 playerView.getPlayerParent()?.listener?.onStop()
+            }
+
+            override fun onVideoStopped(time: Long, index: Int) {
+                super.onVideoStopped(time, index)
+                playerView.getPlayerParent()?.listener?.onVideoStopped(time, index)
             }
 
             override fun onToggleControllerVisible(isVisible: Boolean) {
@@ -156,28 +163,19 @@ class MasterExoPlayerHelper(
             super.onScrollStateChanged(recyclerView, newState)
             when (newState) {
                 RecyclerView.SCROLL_STATE_IDLE -> {
-
                     for (i in 0 until visibleCount) {
                         val view = recyclerView.getChildAt(i) ?: continue
                         if (visibleAreaOffset(view) >= playStrategy) {
                             val masterExoPlayer = view.findViewById<View>(id)
                             if (masterExoPlayer != null && masterExoPlayer is MasterExoPlayer) {
-                                play(view)
+                                val viewHolder = recyclerView.getChildViewHolder(view)
+                                play(view, viewHolder.layoutPosition)
                             } else {
                                 exoPlayerHelper.stop()
                                 playerView.getPlayerParent()?.removePlayer()
                             }
                             break
                         }
-
-                        /*val masterExoPlayer = view.findViewById<View>(id)
-                        if (masterExoPlayer != null && masterExoPlayer is MasterExoPlayer) {
-
-                            if (visibleAreaOffset(masterExoPlayer, view) >= 0.75) {
-                                play(view)
-                                break
-                            }
-                        }*/
                     }
                 }
             }
@@ -186,12 +184,25 @@ class MasterExoPlayerHelper(
         override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
             super.onScrolled(recyclerView, dx, dy)
             val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-            firstVisibleItem = layoutManager?.findFirstVisibleItemPosition() ?: 0;
-            lastVisibleItem = layoutManager?.findLastVisibleItemPosition() ?: 0;
+            firstVisibleItem = layoutManager.findFirstVisibleItemPosition() ?: 0;
+            lastVisibleItem = layoutManager.findLastVisibleItemPosition() ?: 0;
             visibleCount = (lastVisibleItem - firstVisibleItem) + 1;
 
             if (dx == 0 && dy == 0 && recyclerView.childCount > 0) {
-                play(recyclerView.getChildAt(0))
+                for (i in 0 until visibleCount) {
+                    val view = recyclerView.getChildAt(i) ?: continue
+                    if (visibleAreaOffset(view) >= playStrategy) {
+                        val masterExoPlayer = view.findViewById<View>(id)
+                        if (masterExoPlayer != null && masterExoPlayer is MasterExoPlayer) {
+                            val viewHolder = recyclerView.getChildViewHolder(view)
+                            play(view, viewHolder.layoutPosition)
+                        } else {
+                            exoPlayerHelper.stop()
+                            playerView.getPlayerParent()?.removePlayer()
+                        }
+                        break
+                    }
+                }
             }
         }
     }
@@ -241,14 +252,15 @@ class MasterExoPlayerHelper(
         }
     }
 
-    private fun play(view: View) {
+    private fun play(view: View, position: Int) {
         val masterExoPlayer = view.findViewById<View>(id)
 
         if (masterExoPlayer != null && masterExoPlayer is MasterExoPlayer) {
             if (masterExoPlayer.playerView == null) {
+                Log.i("Master","Play video at: $position")
 
                 playerView.getPlayerParent()?.removePlayer()
-                masterExoPlayer.addPlayer(playerView, autoPlay)
+                masterExoPlayer.addPlayer(playerView, autoPlay, position)
                 if (masterExoPlayer.url?.isNotBlank() == true) {
                     if (muteStrategy == MuteStrategy.ALL) {
                         masterExoPlayer.isMute = isMute
